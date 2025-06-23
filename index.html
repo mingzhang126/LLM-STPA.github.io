@@ -1,54 +1,492 @@
-{% extends "base.html" %}
-
-{% block title %}SynSTPA:A new tool for STPA analyse - {{ t.home }}{% endblock %}
-
-{% block content %}
-<div class="text-center mb-5">
-    <h1 class="display-4 mb-3">{{ t.welcome_message }}</h1>
-    <p class="lead text-muted">{{ t.system_theoretic_process_analysis }}</p>
-</div>
-
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                <h2 class="card-title mb-4">
-                    <i class='bx bx-edit-alt'></i> {{ t.system_description }}
-                </h2>
-                <form method="POST" action="/">
-                    <div class="mb-4">
-                        <label for="system_description" class="form-label">{{ t.enter_system_description }}</label>
-                        <textarea class="form-control" id="system_description" name="system_description" rows="6" placeholder="{{ t.system_description_placeholder }}">{{ system_description }}</textarea>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <button type="button" class="btn btn-secondary" onclick="fillExample()">
-                            <i class='bx bx-file'></i> {{ t.fill_example }}
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class='bx bx-right-arrow-alt'></i> {{ t.start_analysis }}
-                        </button>
-                    </div>
-                </form>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SynSTPA:A new tool for STPA analyse</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #3498db;
+            --text-color: #2c3e50;
+            --light-bg: #f8f9fa;
+        }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: var(--text-color); background-color: var(--light-bg); }
+        .navbar { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .navbar-brand { font-weight: 600; font-size: 2rem; }
+        .list-group-item { border: none; margin-bottom: 0.8rem; border-radius: 8px !important; transition: all 0.3s ease; }
+        .list-group-item:hover { background-color: var(--light-bg); transform: translateX(5px); }
+        .list-group-item.active { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .btn { border-radius: 8px; padding: 0.5rem 1.2rem; font-weight: 500; transition: all 0.3s ease; }
+        .btn-primary { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .btn-primary:hover { background-color: #2980b9; border-color: #2980b9; transform: translateY(-2px); }
+        .form-control { border-radius: 8px; border: 1px solid #e0e0e0; padding: 0.75rem; }
+        .form-control:focus { border-color: var(--accent-color); box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25); }
+        .table { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .table thead th { background-color: var(--primary-color); color: white; border: none; padding: 1rem; }
+        .table tbody td { padding: 1rem; vertical-align: middle; }
+        .alert { border-radius: 12px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        body { background-color: #f8f9fa; }
+        #reflink button, #language-switch button { background-color: #b8c5d3; color: white; border: none; padding: 5px 10px; margin: 5px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
+        #reflink button:hover, #language-switch button:hover { background-color: #0056b3; }
+        .container { max-width: 1800px; }
+        .card { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        textarea { resize: vertical; }
+        #diagram svg { width: 100%; height: auto; }
+        .table tr { cursor: pointer; }
+        .list-group-item.active { background-color: #007bff; border-color: #007bff; color: white; }
+        .table-responsive { overflow-x: auto; margin-bottom: 1rem; }
+        .table { width: 100%; min-width: 1200px; font-size: 0.9rem; border-collapse: collapse; }
+        .table th, .table td { white-space: normal; word-wrap: break-word; padding: 8px 12px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">SynSTPA</a>
+            <div id="language-switch" class="ms-auto">
+                <button onclick="switchLanguage('zh')">中文</button>
+                <button onclick="switchLanguage('en')">English</button>
             </div>
         </div>
+    </nav>
 
-        {% if error %}
-        <div class="alert alert-danger mt-4" role="alert">
-            <i class='bx bx-error-circle'></i> {{ error }}
+    <div class="container mt-4">
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab">首页</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="steps-tab" data-bs-toggle="tab" data-bs-target="#steps" type="button" role="tab">分析步骤</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="results-tab" data-bs-toggle="tab" data-bs-target="#results" type="button" role="tab">分析结果</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabsContent">
+            <!-- 首页内容 -->
+            <div class="tab-pane fade show active" id="home" role="tabpanel">
+                <div class="text-center mb-5 mt-4">
+                    <h1 class="display-4 mb-3">欢迎使用 STPA 分析工具</h1>
+                    <p class="lead text-muted">系统理论过程分析（System-Theoretic Process Analysis）工具，此网页仅为静态Demo展示，无法正式推理，正式推理功能将在后续开放。
+                    </p>
+                </div>
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-body">
+                                <h2 class="card-title mb-4"><i class='bx bx-edit-alt'></i> 系统描述</h2>
+                                <form id="system-form">
+                                    <div class="mb-4">
+                                        <label for="system_description" class="form-label">请输入系统描述：</label>
+                                        <textarea class="form-control" id="system_description" rows="6" placeholder="请详细描述系统的功能、组件和交互关系...">自动驾驶单车道巡航SLP系统
+- 主要功能：实现车辆的单车道巡航功能。
+- 关键组件：驾驶员、传感器(各类车身传感器、驾驶员状态监测、激光雷达、摄像头、毫米波雷达)、刹车、方向盘、HMI交互系统、SLP单车道巡航控制器、最小风险控制器（SLP控制器失效时接管SLP功能）被控车辆、环境。
+- 运行环境：城市道路。</textarea>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <button type="button" class="btn btn-secondary" onclick="fillExample()"><i class='bx bx-file'></i> 填充示例</button>
+                                        <button type="button" class="btn btn-primary" onclick="startAnalysis()"><i class='bx bx-right-arrow-alt'></i> 开始分析</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 步骤内容 -->
+            <div class="tab-pane fade" id="steps" role="tabpanel">
+                <div class="mb-4">
+                    <ul class="nav nav-pills mb-3" id="stepsPills" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="step1-tab" data-bs-toggle="pill" data-bs-target="#step1" type="button" role="tab">步骤 1</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="step2-tab" data-bs-toggle="pill" data-bs-target="#step2" type="button" role="tab">步骤 2</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="step3-tab" data-bs-toggle="pill" data-bs-target="#step3" type="button" role="tab">步骤 3</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="step4-tab" data-bs-toggle="pill" data-bs-target="#step4" type="button" role="tab">步骤 4</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="step5-tab" data-bs-toggle="pill" data-bs-target="#step5" type="button" role="tab">步骤 5</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="step6-tab" data-bs-toggle="pill" data-bs-target="#step6" type="button" role="tab">步骤 6</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="stepsPillsContent">
+                        <!-- 步骤 1 -->
+                        <div class="tab-pane fade show active" id="step1" role="tabpanel">
+                            <div class="d-flex align-items-center mb-4 mt-4">
+                                <div class="step-number me-3">
+                                    <span class="badge bg-primary rounded-circle p-4" style="font-size: 2.0rem; min-width: 3.5rem; height: 4.0rem; display: flex; align-items: center; justify-content: center;">1</span>
+                                </div>
+                                <div>
+                                    <h1 class="mb-1">定义系统目标和安全约束</h1>
+                                    <p class="text-muted mb-0">分三步定义分析目的，系统可能出现的损失危害以及安全约束：1) 生成 Losses，2) 生成 Hazards，3) 生成 Safety Constraints。</p>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="include_table1" checked>
+                                    <label class="form-check-label" for="include_table1"><i class='bx bx-table'></i> 生成相关表格</label>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="result1" class="form-label"><i class='bx bx-edit'></i> 分析结果</label>
+                                <textarea class="form-control" id="result1" rows="2" placeholder="......"></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <h3 class="mb-3"><i class='bx bx-analyse'></i> 生成分析</h3>
+                                <div class="d-flex gap-3">
+                                    <button type="button" class="btn btn-success" onclick="generateLosses()"><i class='bx bx-plus-circle'></i> 生成 Losses</button>
+                                    <button type="button" class="btn btn-success" onclick="generateHazards()"><i class='bx bx-plus-circle'></i> 生成 Hazards</button>
+                                    <button type="button" class="btn btn-success" onclick="generateConstraints()"><i class='bx bx-plus-circle'></i> 生成 Safety Constraints</button>
+                                </div>
+                            </div>
+                            <!-- 示例表格 -->
+                            <div class="mt-5">
+                                <h4><i class='bx bx-example'></i> 步骤示例</h4>
+                                <div class="card mt-3">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Losses 示例</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Loss ID</th>
+                                                        <th>描述</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>L1</td>
+                                                        <td>车辆碰撞导致人员伤亡</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>L2</td>
+                                                        <td>车辆关键部件损坏</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>L3</td>
+                                                        <td>环境破坏或第三方财产损失</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 步骤 2 -->
+                        <div class="tab-pane fade" id="step2" role="tabpanel">
+                            <div class="d-flex align-items-center mb-4 mt-4">
+                                <div class="step-number me-3">
+                                    <span class="badge bg-primary rounded-circle p-4" style="font-size: 2.0rem; min-width: 3.5rem; height: 4.0rem; display: flex; align-items: center; justify-content: center;">2</span>
+                                </div>
+                                <div>
+                                    <h1 class="mb-1">建立控制架构</h1>
+                                    <p class="text-muted mb-0">构建系统的控制架构图，识别控制器和受控过程。由于篇幅以及大模型原因，采用表格的形式展示！</p>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <h3 class="mb-3"><i class='bx bx-plus-circle'></i> 添加自定义控制行为</h3>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3 mb-3">
+                                                <label for="custom_control_action" class="form-label">控制行为</label>
+                                                <input type="text" class="form-control" id="custom_control_action" placeholder="例如：调整车速">
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label for="custom_from" class="form-label">发出者</label>
+                                                <input type="text" class="form-control" id="custom_from" placeholder="例如：SLP控制器">
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label for="custom_to" class="form-label">目标</label>
+                                                <input type="text" class="form-control" id="custom_to" placeholder="例如：刹车系统">
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label for="custom_condition" class="form-label">发出条件</label>
+                                                <input type="text" class="form-control" id="custom_condition" placeholder="例如：与前车距离小于安全阈值">
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-primary"><i class='bx bx-plus'></i> 添加控制行为</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 示例表格 -->
+                            <div class="mt-5">
+                                <h4><i class='bx bx-example'></i> 步骤示例</h4>
+                                <div class="card mt-3">
+                                    <div class="card-body">
+                                        <h5 class="card-title">控制行为示例</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>CA ID</th>
+                                                        <th>控制行为</th>
+                                                        <th>发出者</th>
+                                                        <th>目标</th>
+                                                        <th>条件</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>CA1</td>
+                                                        <td>调整巡航速度</td>
+                                                        <td>SLP控制器</td>
+                                                        <td>动力系统</td>
+                                                        <td>根据前车速度动态调整</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>CA2</td>
+                                                        <td>施加制动</td>
+                                                        <td>SLP控制器</td>
+                                                        <td>刹车系统</td>
+                                                        <td>与前车距离小于安全阈值</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 步骤 3-6 结构类似，此处省略 -->
+                        <div class="tab-pane fade" id="step3" role="tabpanel">
+                            <div class="d-flex align-items-center mb-4 mt-4">
+                                <div class="step-number me-3">
+                                    <span class="badge bg-primary rounded-circle p-4" style="font-size: 2.0rem; min-width: 3.5rem; height: 4.0rem; display: flex; align-items: center; justify-content: center;">3</span>
+                                </div>
+                                <div>
+                                    <h1 class="mb-1">不安全控制行为识别</h1>
+                                    <p class="text-muted mb-0">识别可能导致危害的不安全控制行为。</p>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="result3" class="form-label"><i class='bx bx-edit'></i> 分析结果</label>
+                                <textarea class="form-control" id="result3" rows="2" placeholder="......"></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <h3 class="mb-3"><i class='bx bx-analyse'></i> 生成分析</h3>
+                                <div class="d-flex gap-3">
+                                    <button type="button" class="btn btn-success" onclick="generateUnsafeControls()"><i class='bx bx-plus-circle'></i> 生成不安全控制行为</button>
+                                </div>
+                            </div>
+                            <!-- 示例表格 -->
+                            <div class="mt-5">
+                                <h4><i class='bx bx-example'></i> 步骤示例</h4>
+                                <div class="card mt-3">
+                                    <div class="card-body">
+                                        <h5 class="card-title">不安全控制行为示例</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>UCA ID</th>
+                                                        <th>控制行为</th>
+                                                        <th>不安全模式</th>
+                                                        <th>导致危害</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>UCA1</td>
+                                                        <td>施加制动</td>
+                                                        <td>制动不足</td>
+                                                        <td>车辆碰撞</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>UCA2</td>
+                                                        <td>车道保持</td>
+                                                        <td>未及时纠正车道偏离</td>
+                                                        <td>车辆侧翻</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="step4" role="tabpanel">
+                            <div class="d-flex align-items-center mb-4 mt-4">
+                                <div class="step-number me-3">
+                                    <span class="badge bg-primary rounded-circle p-4" style="font-size: 2.0rem; min-width: 3.5rem; height: 4.0rem; display: flex; align-items: center; justify-content: center;">4</span>
+                                </div>
+                                <div>
+                                    <h1 class="mb-1">危害以及风险评估</h1>
+                                    <p class="text-muted mb-0">分析其严重性和可控性，确认是否可以接受。</p>
+                                </div>
+                            </div>
+                            <!-- 步骤4内容和示例 -->
+                        </div>
+
+                        <div class="tab-pane fade" id="step5" role="tabpanel">
+                            <div class="d-flex align-items-center mb-4 mt-4">
+                                <div class="step-number me-3">
+                                    <span class="badge bg-primary rounded-circle p-4" style="font-size: 2.0rem; min-width: 3.5rem; height: 4.0rem; display: flex; align-items: center; justify-content: center;">5</span>
+                                </div>
+                                <div>
+                                    <h1 class="mb-1">致因因素识别</h1>
+                                    <p class="text-muted mb-0">深入分析导致不安全控制行为的各种诱因。</p>
+                                </div>
+                            </div>
+                            <!-- 步骤5内容和示例 -->
+                        </div>
+
+                        <div class="tab-pane fade" id="step6" role="tabpanel">
+                            <div class="d-flex align-items-center mb-4 mt-4">
+                                <div class="step-number me-3">
+                                    <span class="badge bg-primary rounded-circle p-4" style="font-size: 2.0rem; min-width: 3.5rem; height: 4.0rem; display: flex; align-items: center; justify-content: center;">6</span>
+                                </div>
+                                <div>
+                                    <h1 class="mb-1">安全需求与触发条件汇总</h1>
+                                    <p class="text-muted mb-0">汇总所有安全需求与触发条件。</p>
+                                </div>
+                            </div>
+                            <!-- 步骤6内容和示例 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结果内容 -->
+            <div class="tab-pane fade" id="results" role="tabpanel">
+                <div class="d-flex align-items-center mb-4 mt-4">
+                    <div class="me-3"><i class='bx bx-check-circle text-success' style="font-size: 2.5rem;"></i></div>
+                    <div>
+                        <h1 class="mb-1">分析完成</h1>
+                        <p class="text-muted mb-0">以下是 STPA 分析的结果</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h2 class="card-title mb-3"><i class='bx bx-info-circle'></i> 系统描述</h2>
+                                <p class="card-text">自动驾驶单车道巡航SLP系统 - 主要功能：实现车辆的单车道巡航功能。关键组件：驾驶员、传感器、刹车、方向盘、HMI交互系统、SLP控制器等。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h2 class="card-title mb-3"><i class='bx bx-analyse'></i> 分析结果</h2>
+                                <div class="accordion" id="resultsAccordion">
+                                    <div class="accordion-item">
+                                        <h3 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#step1Collapse">步骤 1：系统级危害分析</button></h3>
+                                        <div id="step1Collapse" class="accordion-collapse collapse show">
+                                            <div class="accordion-body">
+                                                <div class="mb-4">
+                                                    <h4 class="mb-3"><i class='bx bx-error'></i> 系统可能损失 (Losses)</h4>
+                                                    <div class="table-responsive">
+                                                        <table class="table table-hover">
+                                                            <thead><tr><th>Loss ID</th><th>Description</th></tr></thead>
+                                                            <tbody>
+                                                                <tr><td><span class="badge bg-primary">L1</span></td><td>人员伤亡</td></tr>
+                                                                <tr><td><span class="badge bg-primary">L2</span></td><td>车辆损坏</td></tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        {% endif %}
     </div>
-</div>
-{% endblock %}
 
-{% block scripts %}
-<script>
-function fillExample() {
-    const example = `自动驾驶单车道巡航SLP系统
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function fillExample() {
+            const example = `自动驾驶单车道巡航SLP系统
 - 主要功能：实现车辆的单车道巡航功能。
 - 关键组件：驾驶员、传感器(各类车身传感器、驾驶员状态监测、激光雷达、摄像头、毫米波雷达)、刹车、方向盘、HMI交互系统、SLP单车道巡航控制器、最小风险控制器（SLP控制器失效时接管SLP功能）被控车辆、环境。
 - 运行环境：城市道路。`;
-    document.getElementById('system_description').value = example;
-}
-</script>
-{% endblock %}
+            document.getElementById('system_description').value = example;
+        }
+        function startAnalysis() {
+            alert('分析已开始，请在步骤标签页查看结果');
+            const tab = new bootstrap.Tab(document.getElementById('steps-tab'));
+            tab.show();
+        }
+        function switchLanguage(lang) {
+            alert('语言切换功能已触发：' + lang);
+        }
+        function generateLosses() {
+            document.getElementById('result1').value = '已生成Losses: 车辆碰撞导致人员伤亡、车辆关键部件损坏、环境破坏或第三方财产损失';
+            // 显示示例表格
+            const exampleTable = document.createElement('div');
+            exampleTable.className = 'card mt-3';
+            exampleTable.innerHTML = `
+                <div class="card-body">
+                    <h5 class="card-title">生成的Losses结果</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Loss ID</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>L1</td>
+                                    <td>车辆碰撞导致人员伤亡</td>
+                                </tr>
+                                <tr>
+                                    <td>L2</td>
+                                    <td>车辆关键部件损坏</td>
+                                </tr>
+                                <tr>
+                                    <td>L3</td>
+                                    <td>环境破坏或第三方财产损失</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            document.getElementById('step1').appendChild(exampleTable);
+        }
+        function generateHazards() {
+            document.getElementById('result1').value += '\n已生成Hazards: 车辆间距离过近、车速过高、系统失效未切换到最小风险状态';
+        }
+        function generateConstraints() {
+            document.getElementById('result1').value += '\n已生成Safety Constraints: 确保与前车保持安全距离、确保车速不超过道路限制、确保系统失效时能切换到最小风险状态';
+        }
+        function generateHARA() {
+            document.getElementById('result4').value = '已生成HARA评估结果: 车辆碰撞(不可接受)、系统失效(高风险)';
+        }
+        function generateCausalFactors() {
+            document.getElementById('result5').value = '已生成致因因素: 传感器故障、算法缺陷、环境干扰、人为误操作';
+        }
+        function generateUnsafeControls() {
+            document.getElementById('result3').value = '已生成不安全控制行为: UCA1-制动不足、UCA2-转向延迟、UCA3-加速不当、UCA4-系统无响应';
+        }
+        function generateSafetyRequirements() {
+            document.getElementById('result6').value = '已生成安全需求: SR1-距离监测、SR2-系统冗余、SR3-环境适应性、SR4-人机交互';
+        }
+    </script>
+</body>
+</html>
